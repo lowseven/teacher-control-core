@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using TeacherControl.API.Configurations;
@@ -26,11 +26,16 @@ namespace TeacherControl.API.Controllers
     {
         protected readonly IUserRepository _UserRepo;
         protected readonly IOptions<AppSettings> _Options;
+        protected readonly ILogger<UserAuthController> _Logger;
 
-        public UserAuthController(IUserRepository userRepo, IOptions<AppSettings> options)
+        public UserAuthController(
+            IUserRepository userRepo,
+            ILogger<UserAuthController> logger,
+            IOptions<AppSettings> options)
         {
             _UserRepo = userRepo;
             _Options = options;
+            _Logger = logger;
         }
 
         [AllowAnonymous]
@@ -71,11 +76,8 @@ namespace TeacherControl.API.Controllers
         [HttpPost, Route("register")]
         public IActionResult Register([FromBody] UserCredentialDTO dto)
         {
-            return this.Created(() =>
-                _UserRepo.Add(dto).Equals((int)TransactionStatus.SUCCESS)
-                    ? dto.ToJson()
-                    : new JObject()
-                );
+            return this.Created(() => _UserRepo.Add(dto).Equals(TransactionStatus.SUCCESS)
+                    ? dto : new UserCredentialDTO(), _Logger);
         }
 
         [HttpPut, Route("update-password")] //TODO: add the regex to validate the string
@@ -86,7 +88,8 @@ namespace TeacherControl.API.Controllers
 
             Password = CredentialHelper.CreatePasswordHash(Password, user.SaltToken);
 
-            return this.NoContent(() => _UserRepo.Update(user, new { Password }).Equals((int) TransactionStatus.SUCCESS));
+            return this.NoContent(() =>
+                _UserRepo.Update(user, new { Password }).Equals(TransactionStatus.SUCCESS), _Logger);
         }
 
         [HttpPost, Route("add-roles")]
@@ -95,7 +98,8 @@ namespace TeacherControl.API.Controllers
             User user = _UserRepo.Find(i => i.Email.Equals(User.Identity.Name));
             if (user is null || user.Id <= 0) return BadRequest("User is Invalid or not Found");
 
-            return this.NoContent(() => _UserRepo.AddUserRoles(UserId, Roles).Equals((int)TransactionStatus.SUCCESS));
+            return this.NoContent(() =>
+                _UserRepo.AddUserRoles(UserId, Roles).Equals(TransactionStatus.SUCCESS), _Logger);
         }
 
         [HttpPut, Route("update-roles")]
@@ -104,7 +108,8 @@ namespace TeacherControl.API.Controllers
             User user = _UserRepo.Find(i => i.Email.Equals(User.Identity.Name));
             if (user is null || user.Id <= 0) return BadRequest("User is Invalid or not Found");
 
-            return this.NoContent(() => _UserRepo.UpdateUserRoles(UserId, Roles).Equals((int) TransactionStatus.SUCCESS));
+            return this.NoContent(() =>
+                _UserRepo.UpdateUserRoles(UserId, Roles).Equals(TransactionStatus.SUCCESS), _Logger);
         }
 
         [HttpDelete, Route("revoke-roles")]
@@ -113,7 +118,8 @@ namespace TeacherControl.API.Controllers
             User user = _UserRepo.Find(i => i.Email.Equals(User.Identity.Name));
             if (user is null || user.Id <= 0) return BadRequest("User is Invalid or not Found");
 
-            return this.NoContent(() => _UserRepo.RemoveUserRoles(UserId, Roles).Equals((int)TransactionStatus.SUCCESS));
+            return this.NoContent(() =>
+                _UserRepo.RemoveUserRoles(UserId, Roles).Equals(TransactionStatus.SUCCESS), _Logger);
         }
     }
 }

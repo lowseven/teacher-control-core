@@ -65,11 +65,16 @@ namespace TeacherControl.DataEFCore
 
         public override int SaveChanges()
         {
-            ChangeTracker
+            if (ChangeTracker.HasChanges())
+            {
+                ChangeTracker
                 .ApplyAuditInformation(_AuthUserService);
 
-            base.SaveChanges();
-            return (int)TransactionStatus.SUCCESS;
+                base.SaveChanges();
+                return (int)TransactionStatus.SUCCESS;
+            }
+
+            return (int)TransactionStatus.UNCHANGED;
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))

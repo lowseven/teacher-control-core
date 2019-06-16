@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TeacherControl.Core\TeacherControl.Core.csproj" />
+    <ProjectReference Include="..\..\src\TeacherControl.Core\TeacherControl.Core.csproj" />
   </ItemGroup>
 
 </Project>

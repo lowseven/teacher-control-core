@@ -14,7 +14,7 @@ namespace TeacherControl.API.Controllers
         [HttpGet]
         public IActionResult GetConstantsValues()
         {
-            return View();
+            return Json(new List<string>());
         }
     }
 }

@@ -11,12 +11,12 @@ namespace TeacherControl.API.Configurations
     {
         public static IServiceCollection ConfigureCaching(this IServiceCollection services, IConfigurationRoot configuration)
         {
-            services
-                .AddDistributedRedisCache(config => {
-                    config.Configuration = configuration.GetSection("ConnectionStrings:TeacherControlCache").Value;
-                    config.InstanceName = "TC_Redis_Cache";
-                })
-                .ConfigureResponseCaching();
+            //services
+            //    .AddDistributedRedisCache(config => {
+            //        config.Configuration = configuration.GetSection("ConnectionStrings:TeacherControlCache").Value;
+            //        config.InstanceName = "TC_Redis_Cache";
+            //    })
+            //    .ConfigureResponseCaching();
             return services;
         }
 

@@ -30,9 +30,9 @@ namespace TeacherControl.Common.Extensors
             try
             {
                 return JObject.FromObject(obj);
-            } catch(Exception e)
+            } catch(Exception)
             {
-                //TODO: logger here
+                
                 return null;
             }
         }
@@ -43,7 +43,7 @@ namespace TeacherControl.Common.Extensors
             {
                 return JArray.FromObject(array);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //TODO: logger here
                 return null;

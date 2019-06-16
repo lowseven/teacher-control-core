@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Inflector.NetStandard" Version="1.2.2" />
+    <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="2.2.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="2.2.1" />
@@ -13,9 +14,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\test\TeacherControl.MockData\TeacherControl.MockData.csproj" />
     <ProjectReference Include="..\TeacherControl.Common\TeacherControl.Common.csproj" />
     <ProjectReference Include="..\TeacherControl.Domain\TeacherControl.Domain.csproj" />
-    <ProjectReference Include="..\TeacherControl.MockData\TeacherControl.MockData.csproj" />
   </ItemGroup>
 
 </Project>

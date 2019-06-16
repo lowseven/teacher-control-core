@@ -1,174 +1,171 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Net;
+using TeacherControl.Common.Enums;
+using TeacherControl.Common.Extensors;
+using TeacherControl.Infraestructure.Logger;
 
 namespace TeacherControl.API.Extensors
 {
     public static class HttpResponseExtensors
     {
-        public static IActionResult Created(this Controller controller, Func<JObject> method)
+
+        public static IActionResult Created<T>(this Controller controller, Func<T> callback, ILogger<Controller> logger) where T : class
         {
-            if (controller.ModelState.IsValid)
+            return HandlingExceptions(controller, logger, () =>
             {
-                try
-                {
-                    JObject json = method();
-                    if (json.HasValues)
-                    {
-                        return controller.Created(controller.Url.Action(), json);
-                    }
+                T obj = callback.Invoke();
 
-                    return controller.BadRequest("Something went wrong");//TODO: Improve the err message
-                }
-                catch (SqlException ex)
+                if (obj.Equals(null))
                 {
-                    //TODO: just the exceptions should be shown only on the logger, the response should have another message 
-
-                    JsonResult json = new JsonResult(ex)
-                    {
-                        StatusCode = (int)HttpStatusCode.InternalServerError,
-                        Value = new { message = ex.Message, details = ex.InnerException != null ? ex.InnerException.Message : "" }
-                    };//TODO: get a more valuable sqlserver error
-                    return json;
+                    Type type = obj.GetType();
+                    throw new NullReferenceException(
+                        $"The Object {type.FullName} cannot be Null or Nullable\nFinds in:\t{type.Assembly}");
                 }
-                catch (Exception ex)
+
+                JObject json = obj.ToJson();
+
+                if (json.HasValues)
                 {
-                    //TODO: just the exceptions should be shown only on the logger, the response should have another message 
-                    JsonResult json = new JsonResult(ex)
-                    {
-                        StatusCode = (int)HttpStatusCode.InternalServerError,
-                        Value = new { message = ex.Message, details = ex.InnerException != null ? ex.InnerException.Message : "" }
-                    };//TODO: get a more valuable exception error
-                    return json;
-                }
-            }
+                    logger.Emit(LoggerEventStatus.INSERTED_ITEM,
+                        $"{controller.Url.Action()} Is called, Creating The {typeof(T).Name} Entity");
 
-            return controller.BadRequest(controller.ModelState);
+                    return controller.Created(controller.Url.Action(), json);
+                }
+
+                return controller.BadRequest(controller.ModelState.GetErrors().ToJson());
+            });
         }
 
-        public static IActionResult Ok(this Controller controller, Func<JObject> method)
+        public static IActionResult Ok<T>(this Controller controller, Func<T> callback, ILogger<Controller> logger) where T : class
         {
-            if (controller.ModelState.IsValid)
+            return HandlingExceptions(controller, logger, () =>
             {
-                try
+                T obj = callback.Invoke();
+
+                if (obj.Equals(null))
                 {
-                    JObject json = method();
-                    if (json.HasValues)
-                    {
-                        return controller.Json(json);
-                    }
-
-                    return controller.BadRequest(controller.ModelState);
+                    Type type = obj.GetType();
+                    throw new NullReferenceException(
+                        $"The Object {type.FullName} cannot be Null or Nullable" +
+                        $"\t\nFinds in:\t{type.Assembly}");
                 }
-                catch (SqlException ex)
+
+                JObject json = obj.ToJson();
+                if (json.HasValues)
                 {
-                    //TODO: just the exceptions should be shown only on the logger, the response should have another message 
+                    logger.Emit(LoggerEventStatus.GET_ITEM,
+                        $"{controller.Url.Action()} Is called, Getting The {typeof(T).Name} Entities");
 
-                    JsonResult json = new JsonResult(ex)
-                    {
-                        StatusCode = (int)HttpStatusCode.InternalServerError,
-                        Value = new { message = ex.Message, details = ex.InnerException != null ? ex.InnerException.Message : "" }
-                    };//TODO: get a more valuable sqlserver error
-                    return json;
+                    return controller.Json(json);
                 }
-                catch (Exception ex)
-                {
-                    //TODO: just the exceptions should be shown only on the logger, the response should have another message 
 
-                    JsonResult json = new JsonResult(ex)
-                    {
-                        StatusCode = (int)HttpStatusCode.InternalServerError,
-                        Value = new { message = ex.Message, details = ex.InnerException != null ? ex.InnerException.Message : "" }
-                    };//TODO: get a more valuable sqlserver error
-                    return json;
-                }
-            }
+                return controller.BadRequest(controller.ModelState);
+            });
 
-            return controller.BadRequest(controller.ModelState);
         }
 
-        public static IActionResult Ok(this Controller controller, Func<JArray> method)
+        public static IActionResult Ok<T>(this Controller controller, Func<IEnumerable<T>> callback, ILogger<Controller> logger) where T : class
         {
-            if (controller.ModelState.IsValid)
+            return HandlingExceptions(controller, logger, () =>
             {
-                try
+                JArray json = callback.Invoke().ToJsonArray();
+                if (json.Count >= 0)
                 {
-                    JArray json = method();
-                    if (json.HasValues)
-                    {
-                        return controller.Json(json);
-                    }
-
-                    return controller.BadRequest(controller.ModelState);
+                    return controller.Json(json);
                 }
-                catch (SqlException ex)
-                {
-                    //TODO: just the exceptions should be shown only on the logger, the response should have another message 
 
-                    JsonResult json = new JsonResult(ex)
-                    {
-                        StatusCode = (int)HttpStatusCode.InternalServerError,
-                        Value = new { message = ex.Message, details = ex.InnerException != null ? ex.InnerException.Message : "" }
-                    };//TODO: get a more valuable sqlserver error
-                    return json;
-                }
-                catch (Exception ex)
-                {
-                    //TODO: just the exceptions should be shown only on the logger, the response should have another message 
-
-                    JsonResult json = new JsonResult(ex)
-                    {
-                        StatusCode = (int)HttpStatusCode.InternalServerError,
-                        Value = new { message = ex.Message, details = ex.InnerException != null ? ex.InnerException.Message : "" }
-                    };//TODO: get a more valuable sqlserver error
-                    return json;
-                }
-            }
-
-            return controller.BadRequest(controller.ModelState);
+                return controller.BadRequest(controller.ModelState);
+            });
         }
 
-        public static IActionResult NoContent(this Controller controller, Func<bool> method)
+        public static IActionResult NoContent(this Controller controller, Func<bool> callback, ILogger<Controller> logger)
         {
-            if (controller.ModelState.IsValid)
+            return HandlingExceptions(controller, logger, () =>
+            {
+                bool isSuccess = callback.Invoke();
+                if (isSuccess)
+                {
+                    return controller.NoContent();
+                }
+
+                return controller.BadRequest(controller.ModelState);// TBD
+
+            });
+
+        }
+
+        private static IActionResult HandlingExceptions(Controller controller, ILogger<Controller> logger, Func<IActionResult> callback)
+        {
+            if (callback != null && controller.ModelState.IsValid)
             {
                 try
                 {
-                    bool isSuccess = method();
-                    if (isSuccess)
+                    return callback.Invoke();
+                }
+                catch (NullReferenceException ex)
+                {
+                    JsonResult json = new JsonResult(ex)
                     {
-                        return controller.NoContent();
-                    }
+                        StatusCode = (int)HttpStatusCode.InternalServerError,
+                        Value = HttpStatusCode.InternalServerError.ToString()
+                    };
 
-                    return controller.BadRequest(controller.ModelState);// TBD
+                    string details = ex.InnerException != null ? ex.InnerException.Message : string.Empty;
+                    logger.Emit(LoggerEventStatus.NULL_EXCEPTION_ERROR,
+                        $"Error: {ex.Message}\n" +
+                        $"Details: {details}\n" +
+                        $"Where: {controller.Url.Action()}");
+
+                    return json;
                 }
                 catch (SqlException ex)
                 {
-                    //TODO: just the exceptions should be shown only on the logger, the response should have another message 
 
                     JsonResult json = new JsonResult(ex)
                     {
                         StatusCode = (int)HttpStatusCode.InternalServerError,
-                        Value = new { message = ex.Message, details = ex.InnerException != null ? ex.InnerException.Message : "" }
-                    };//TODO: get a more valuable sqlserver error
+                        Value = HttpStatusCode.InternalServerError.ToString()
+                    };
+
+                    string details = ex.InnerException != null ? ex.InnerException.Message : string.Empty;
+                    logger.Emit(LoggerEventStatus.DABATABASE_ERROR,
+                        $"Error: {ex.Message}\n\t" +
+                        $"Where: {controller.Url.Action()}\n\t" +
+                        $"Details: {details}"
+                        );
+
                     return json;
                 }
                 catch (Exception ex)
                 {
-                    //TODO: just the exceptions should be shown only on the logger, the response should have another message 
-
                     JsonResult json = new JsonResult(ex)
                     {
                         StatusCode = (int)HttpStatusCode.InternalServerError,
-                        Value = new { message = ex.Message, details = ex.InnerException != null ? ex.InnerException.Message : "" }
-                    };//TODO: get a more valuable sqlserver error
+                        Value = HttpStatusCode.InternalServerError.ToString()
+                    };
+
+                    string details = ex.InnerException != null ? ex.InnerException.Message : string.Empty;
+                    logger.Emit(LoggerEventStatus.GENERIC_EXCEPTION_ERROR,
+                        $"Error: {ex.Message}\n\t" +
+                        $"Where: {controller.Url.Action()}\n\t" +
+                        $"Details: {details}"
+                        );
+
                     return json;
                 }
             }
 
-            return controller.BadRequest(controller.ModelState);
+            logger.Emit(LoggerEventStatus.BAD_REQUEST_FORMAT,
+                $"Action Method: {controller.Url.Action()}\n\t" +
+                $"Errors: {string.Join("\n\t", controller.ModelState.GetErrors())}");
+
+
+            return controller.BadRequest(controller.ModelState.GetErrors().ToJson());
         }
 
     }

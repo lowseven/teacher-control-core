@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,10 +18,14 @@ namespace TeacherControl.API.Controllers
     public class CoursesController : Controller
     {
         protected readonly ICourseRepository _CourseRepo;
+        protected readonly ILogger<CoursesController> _Logger;
 
-        public CoursesController(ICourseRepository courseRepository)
+        public CoursesController(
+            ICourseRepository courseRepository,
+            ILogger<CoursesController> logger)
         {
             _CourseRepo = courseRepository;
+            _Logger = logger;
         }
 
         [HttpGet]
@@ -38,13 +43,13 @@ namespace TeacherControl.API.Controllers
                 };
 
                 return json;
-            });
+            }, _Logger);
         }
 
         [HttpGet, Route("{courseId:int:min(1)}")]
         public IActionResult GetCourseById([FromRoute] int courseId)
         {
-            return this.Ok(() => _CourseRepo.GetById(courseId).ToJson());
+            return this.Ok(() => _CourseRepo.GetById(courseId).ToJson(), _Logger);
         }
 
         [HttpPost]
@@ -55,14 +60,15 @@ namespace TeacherControl.API.Controllers
                 bool result = _CourseRepo.Add(dto).Equals((int)TransactionStatus.SUCCESS);
 
                 return result ? dto.ToJson() : new JObject();
-            });
+            }, _Logger);
         }
 
         [HttpDelete, Route("{courseId:int:min(1)}")]
         public IActionResult DeleteCourse([FromRoute] int courseId)
         {
             int successTransactionValue = (int)TransactionStatus.SUCCESS;
-            return this.NoContent(() => _CourseRepo.Remove(courseId).Equals(successTransactionValue));
+            return this.NoContent(() => 
+                _CourseRepo.Remove(courseId).Equals(successTransactionValue), _Logger);
         }
 
         [HttpPut, Route("{courseId:int:min(1)}")]
@@ -70,7 +76,8 @@ namespace TeacherControl.API.Controllers
         {
             int successTransactionValue = (int)TransactionStatus.SUCCESS;
 
-            return this.NoContent(() => _CourseRepo.Update(courseId, dto).Equals(successTransactionValue));
+            return this.NoContent(() => 
+                _CourseRepo.Update(courseId, dto).Equals(successTransactionValue), _Logger);
         }
 
         [HttpPatch, Route("{courseId:int:min(1)}/assign-credits/{userId:int:min(1)}")]
@@ -78,7 +85,8 @@ namespace TeacherControl.API.Controllers
         {
             int successTransactionValue = (int)TransactionStatus.SUCCESS;
 
-            return this.NoContent(() => _CourseRepo.AssignUserCredits(courseId, userId, credits).Equals(successTransactionValue));
+            return this.NoContent(() => 
+                _CourseRepo.AssignUserCredits(courseId, userId, credits).Equals(successTransactionValue), _Logger);
         }
 
         [HttpPost, Route("{courseId:int:min(1)}/subscribe/{userId:int:min(1)}")]
@@ -86,15 +94,15 @@ namespace TeacherControl.API.Controllers
         {
             int successTransactionValue = (int)TransactionStatus.SUCCESS;
 
-            return this.NoContent(() => _CourseRepo.SubscribeUser(courseId, userId).Equals(successTransactionValue));
+            return this.NoContent(() => 
+                _CourseRepo.SubscribeUser(courseId, userId).Equals(successTransactionValue), _Logger);
         }
 
         [HttpPost, Route("{courseId:int:min(1)}/subscribe")]
         public IActionResult SubscribeStudents([FromRoute] int courseId, [FromBody] IEnumerable<int> Users)
         {
-            int successTransactionValue = (int)TransactionStatus.SUCCESS;
-
-            return this.NoContent(() => _CourseRepo.SubscribeUsers(courseId, Users).Equals(successTransactionValue));
+            return this.NoContent(() => 
+                _CourseRepo.SubscribeUsers(courseId, Users).Equals(TransactionStatus.SUCCESS), _Logger);
         }
 
     }
